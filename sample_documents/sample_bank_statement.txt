@@ -1,0 +1,4 @@
+Account Holder Name: Magesh Kumar
+Employer: ABC Technologies
+PAN: ABCDE1234F
+Account Number: 123456789012

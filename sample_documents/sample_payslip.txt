@@ -1,0 +1,4 @@
+Employee Name: Magesh Kumar
+Employer: ABC Technologies
+Monthly Salary: 45000
+PAN: ABCDE1234F

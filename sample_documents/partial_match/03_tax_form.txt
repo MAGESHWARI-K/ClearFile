@@ -1,0 +1,8 @@
+DOCUMENT: TAX FORM
+Name: Arjun Prakash
+Employer: Northstar Analytics
+Monthly Salary: 62500
+Tax ID: BCDPE2345K
+Date of Birth: 22-09-2001
+Address: 42 Green Park, Puducherry
+Employment Type: Full Time

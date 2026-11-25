@@ -1,0 +1,10 @@
+DOCUMENT: PAYSLIP
+Name: Meera Krishnan
+Employer: Sunfield Technologies
+Monthly Salary: 72000
+Tax ID: CDEPK3456L
+Account Number: 112233445566
+Date of Birth: 05-03-2000
+Address: 9 Temple Street, Chennai
+IFSC Code: ICIC0007890
+Employment Type: Full Time

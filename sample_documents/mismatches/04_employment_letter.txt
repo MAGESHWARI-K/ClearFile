@@ -1,0 +1,8 @@
+DOCUMENT: EMPLOYMENT LETTER
+Name: Meera Krishnan
+Employer: Sunfield Tech Services
+Monthly Salary: 72000
+Tax ID: CDEPK3456L
+Date of Birth: 05-03-2000
+Address: 9 Temple Street, Chennai
+Employment Type: Full Time

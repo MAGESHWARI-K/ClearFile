@@ -1,0 +1,10 @@
+DOCUMENT: PAYSLIP
+Name: Arjun Prakash
+Employer: Northstar Analytics
+Monthly Salary: 62500
+Tax ID: BCDPE2345K
+Account Number: 987654321098
+Date of Birth: 22-09-2001
+Address: 42 Green Park, Puducherry
+IFSC Code: SBIN0004567
+Employment Type: Full Time

@@ -1,0 +1,10 @@
+DOCUMENT: EMPLOYMENT LETTER
+Name: Kavya Raman
+Employer: BluePeak Systems Pvt Ltd
+Monthly Salary: 58000
+Tax ID: ABCDE1234F
+Account Number: 123456789012
+Date of Birth: 14-06-2002
+Address: 18 Lake View Road, Chennai
+IFSC Code: HDFC0001234
+Employment Type: Full Time

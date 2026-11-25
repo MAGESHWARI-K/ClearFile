@@ -1,0 +1,7 @@
+DOCUMENT: EMPLOYMENT LETTER
+Name: Arjun Prakash
+Employer: Northstar Analytics
+Monthly Salary: 62500
+Tax ID: BCDPE2345K
+Date of Birth: 22-09-2001
+Employment Type: Full Time
