@@ -39,3 +39,15 @@ The chat input is available even before you create an application. Choose “Gen
 
 
 Gemini availability note: the app tries several supported Flash/Flash-Lite models if a model is temporarily unavailable. A Google API 503 can still affect all models during a service incident; wait briefly and retry. In .env, GEMINI_MODEL=gemini-3.1-flash-lite is a lightweight starting option.
+
+
+## Category 2 Agentic AI workflow
+See `CATEGORY2_IMPLEMENTATION.md` for the supervisor–worker workflow, MCP server/client, checkpointing, event trace, tests and limitations. A new **Agent Workflow** page is available in the app.
+
+## Category 2 background workflow and evidence
+- Run the automated checks: `python -m unittest discover -s tests -v`
+- Open **Agent Workflow** and run the supervisor-worker review, or queue a background review.
+- To process queued jobs, open a second terminal in this folder and run: `python -m agentic.job_worker --workers 2`.
+- Demonstrate MCP discovery and tool calls with: `python -m mcp_tools.client YOUR_APPLICATION_ID`.
+- See `CATEGORY2_IMPLEMENTATION.md` for the requirement coverage matrix and `ARCHITECTURE.md` for the Mermaid architecture diagram.
+- Local workflow checkpoints, background job state, and event logs are created under `data/` at runtime and are excluded from the ZIP/Git.

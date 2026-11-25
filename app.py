@@ -1,4 +1,4 @@
-import os, uuid
+import os, uuid, time
 from pathlib import Path
 import streamlit as st
 import pandas as pd
@@ -62,12 +62,12 @@ hr {{border-color:#E7DDD1;}}
 logo='''<svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="7" width="35" height="43" rx="5" stroke="#F8F3EA" stroke-width="4"/><rect x="20" y="14" width="35" height="43" rx="5" fill="#6E1724" stroke="#F8F3EA" stroke-width="4"/><path d="M29 35L36 42L48 28" stroke="#C4A15A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 23H45" stroke="#F8F3EA" stroke-width="3" stroke-linecap="round"/></svg>'''
 st.markdown(f'<div class="brand"><div class="brand-mark">{logo}</div><div><div class="brand-title">ClearFile</div><div class="brand-sub">Applicant document verification</div></div></div>',unsafe_allow_html=True)
 
-pages=['Dashboard','New Application','Reports','ClearFile AI','About']
+pages=['Dashboard','New Application','Reports','ClearFile AI','Agent Workflow','About']
 if 'page' not in st.session_state: st.session_state.page='Dashboard'
 nav=st.columns(len(pages))
 for col,p in zip(nav,pages):
     with col:
-        if st.button(('✦ ' if st.session_state.page==p else '')+p,key='nav_'+p,use_container_width=True): st.session_state.page=p; st.rerun()
+        if st.button(('✦ ' if st.session_state.page==p else '')+p,key='nav_'+p,width='stretch'): st.session_state.page=p; st.rerun()
 st.markdown('<hr>',unsafe_allow_html=True)
 
 def hero(title, subtitle):
@@ -102,20 +102,20 @@ if st.session_state.page=='Dashboard':
         st.markdown('')
         a1,a2=st.columns(2)
         with a1:
-            if st.button('＋  Start new application',type='primary',use_container_width=True): st.session_state.page='New Application'; st.rerun()
+            if st.button('＋  Start new application',type='primary',width='stretch'): st.session_state.page='New Application'; st.rerun()
         with a2:
-            if st.button('View verification reports',use_container_width=True): st.session_state.page='Reports'; st.rerun()
+            if st.button('View verification reports',width='stretch'): st.session_state.page='Reports'; st.rerun()
     with right:
         st.markdown(f'<div class="ai-callout"><div class="dashboard-kicker">ClearFile Intelligence</div><h3>Need help understanding a report?</h3><p style="color:{INK};font-size:14px">Ask questions in plain language. The assistant can explain extracted evidence, compare findings and suggest what an officer should review next.</p></div>',unsafe_allow_html=True)
-        if st.button('✦  Chat with ClearFile AI',type='primary',use_container_width=True): st.session_state.page='ClearFile AI'; st.rerun()
+        if st.button('✦  Chat with ClearFile AI',type='primary',width='stretch'): st.session_state.page='ClearFile AI'; st.rerun()
 
     left,right=st.columns([1.15,.85],gap='large')
     with left:
         st.subheader('Recent applications')
         if apps:
             rows=[{'Application ID':a['application_id'],'Last updated':a['updated_at'],'Review status':a['review_status'],'Documents':len(a['documents']),'Potential mismatches':len(a.get('anomalies',[]))} for a in apps[:6]]
-            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
-            if st.button('Open all reports →',use_container_width=False): st.session_state.page='Reports'; st.rerun()
+            st.dataframe(pd.DataFrame(rows),width='stretch',hide_index=True)
+            if st.button('Open all reports →',width='content'): st.session_state.page='Reports'; st.rerun()
         else:
             st.info('No applications have been saved yet. Start a new application to see activity here.')
     with right:
@@ -238,7 +238,7 @@ elif st.session_state.page=='ClearFile AI':
                 key='clearfile_message_text'
             )
         with send_col:
-            send_message = st.form_submit_button('Send', use_container_width=True, type='primary')
+            send_message = st.form_submit_button('Send', width='stretch', type='primary')
 
     prompt = typed_message.strip() if send_message and typed_message.strip() else None
     if not prompt and st.session_state.get('pending_clearfile_prompt'):
@@ -257,7 +257,7 @@ elif st.session_state.page=='ClearFile AI':
                 from google import genai
                 from google.genai import types
 
-                client = genai.Client(api_key=api_key)
+                client = genai.Client(api_key=api_key, http_options=types.HttpOptions(api_version="v1beta"))
                 configured_model = os.getenv('GEMINI_MODEL', '').strip().strip('"\'').replace('\r', '').replace('\n', '').strip()
                 if configured_model.startswith('models/'):
                     configured_model = configured_model.split('/', 1)[1]
@@ -331,6 +331,9 @@ elif st.session_state.page=='ClearFile AI':
 
                 answer = None
                 last_error = None
+                used_model = None
+                chat_trace_id = str(uuid.uuid4())
+                chat_started = time.perf_counter()
                 for model_name in model_candidates:
                     try:
                         chat = client.chats.create(
@@ -344,6 +347,17 @@ elif st.session_state.page=='ClearFile AI':
                         response = chat.send_message(prompt)
                         answer = (response.text or '').strip()
                         if answer:
+                            used_model = model_name
+                            usage = getattr(response, 'usage_metadata', None)
+                            from agentic.telemetry import emit
+                            emit(chat_trace_id, 'GeminiChat', 'llm_call_completed', {
+                                'model': used_model,
+                                'latency_seconds': round(time.perf_counter() - chat_started, 3),
+                                'prompt_tokens': getattr(usage, 'prompt_token_count', None) if usage else None,
+                                'output_tokens': getattr(usage, 'candidates_token_count', None) if usage else None,
+                                'total_tokens': getattr(usage, 'total_token_count', None) if usage else None,
+                                'cost': 'Not estimated; provider pricing is not configured'
+                            })
                             break
                         last_error = RuntimeError('The model returned an empty response.')
                     except Exception as model_error:
@@ -360,6 +374,14 @@ elif st.session_state.page=='ClearFile AI':
                     raise last_error or RuntimeError('No Gemini model returned a response.')
 
             except Exception as e:
+                try:
+                    from agentic.telemetry import emit
+                    emit(chat_trace_id, 'GeminiChat', 'llm_call_failed', {
+                        'error_type': type(e).__name__,
+                        'latency_seconds': round(time.perf_counter() - chat_started, 3)
+                    })
+                except Exception:
+                    pass
                 error_text = str(e).lower()
                 if any(x in error_text for x in ('401', '403', 'api key', 'permission')):
                     answer = 'I couldn’t connect to Gemini with this API key. Please check that the key in your .env file is active and restart ClearFile.'
@@ -376,6 +398,71 @@ elif st.session_state.page=='ClearFile AI':
         with st.chat_message('assistant'):
             st.markdown(answer)
     st.caption('Privacy note: when Gemini is enabled, your question and, if selected, the saved application context are sent to Google Gemini. Use fictional data for demonstrations.')
+elif st.session_state.page=='Agent Workflow':
+    hero('Agent workflow lab','Run a supervisor–worker evidence review with checkpoints, concurrent workers and an auditable event trace.')
+    st.caption('This is an explainable Python-agent workflow. It does not approve or reject an application.')
+    if not apps:
+        st.info('Create an application first, then return here to run its agent workflow.')
+    else:
+        ids=[a['application_id'] for a in apps]
+        selected_id=st.selectbox('Select saved application',ids)
+        selected_app=get_application(selected_id)
+        run_col, queue_col = st.columns(2)
+        with run_col:
+            if st.button('▶ Run agent workflow',type='primary', width='stretch'):
+                from agentic.orchestrator import run_workflow_sync
+                with st.spinner('Supervisor is dispatching three workers concurrently…'):
+                    result=run_workflow_sync(selected_id,selected_app['extracted'],selected_app['findings'],selected_app['anomalies'])
+                st.session_state['last_agent_run']=result
+        with queue_col:
+            if st.button('＋ Queue background review', width='stretch'):
+                from agentic.job_queue import enqueue_job
+                queued = enqueue_job(selected_id)
+                st.session_state['last_queued_job_id'] = queued['job_id']
+                st.success('Background job queued. Start the worker command shown below to process it.')
+        result=st.session_state.get('last_agent_run')
+        if result and result['state']['application_id']==selected_id:
+            state=result['state']
+            st.success('Workflow completed and checkpoint saved.')
+            st.code('Run ID: '+result['run_id'])
+            m=st.columns(3)
+            for col,(name,item) in zip(m,state['workers'].items()):
+                col.metric(name,item['status'].title())
+                col.write(item['summary'])
+                if item.get('flags'): col.warning('\n'.join(item['flags']))
+            st.subheader('Supervisor summary'); st.write(state['supervisor_summary'])
+            st.write('Duration:',str(state['duration_seconds'])+' seconds')
+            st.write('Token / cost:',state['estimated_llm_cost'])
+            st.info('Human approval required. Current decision: NOT_DECIDED. An officer must inspect source documents.')
+            from agentic.telemetry import read_events
+            with st.expander('Workflow event trace'):
+                events=[e for e in read_events(200) if e['run_id']==result['run_id']]
+                st.json(events)
+        from agentic.state_store import recent_runs
+        with st.expander('Saved workflow checkpoints'):
+            st.dataframe(pd.DataFrame(recent_runs()),width='stretch',hide_index=True)
+        from agentic.job_queue import list_jobs, get_job
+        queued_job_id = st.session_state.get('last_queued_job_id')
+        if queued_job_id:
+            current_job = get_job(queued_job_id)
+            if current_job:
+                st.subheader('Background job status')
+                st.write('Job ID:', current_job['job_id'])
+                st.metric('Job status', current_job['status'].replace('_',' ').title())
+                if current_job.get('result'):
+                    st.success('Background workflow completed. Open Agent Workflow again to review its saved run.')
+                elif current_job.get('error_message'):
+                    st.warning(current_job['error_message'])
+        with st.expander('Background job queue'):
+            st.caption('Queue jobs are persisted in local SQLite. Start the worker in a second PowerShell window; use multiple workers to process separate jobs concurrently.')
+            st.code('python -m agentic.job_worker --workers 2')
+            jobs = list_jobs(20)
+            if jobs:
+                st.dataframe(pd.DataFrame([{k: j.get(k) for k in ('job_id','application_id','status','attempts','created_at','updated_at')} for j in jobs]), width='stretch', hide_index=True)
+            else:
+                st.info('No background jobs yet.')
+    st.markdown('**MCP tools:** `get_application_summary` and `list_field_findings` are available through the local MCP server. See `CATEGORY2_IMPLEMENTATION.md` for the client command.')
+
 elif st.session_state.page=='About':
     hero('A clearer way to verify documents.','A multi-agent applicant document verification prototype built to support careful human review.')
     cols=st.columns(4)
@@ -387,3 +474,4 @@ elif st.session_state.page=='About':
 
 st.markdown('<hr>',unsafe_allow_html=True)
 st.markdown(f'<div style="text-align:center;color:{MUTED};font-size:12px;padding:8px">ClearFile · Applicant Document Verification · Human review required</div>',unsafe_allow_html=True)
+
